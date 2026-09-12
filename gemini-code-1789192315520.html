@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>The Useless Internet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pixel-blue: #3b82f6;
+      --pixel-dark-blue: #1d4ed8;
+      --border-blue: #2d63c8;
+      --bar-blue: #4da2ff;
+      --bg-canvas: #f7faff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-canvas);
+      font-family: 'Silkscreen', monospace;
+      position: relative;
+    }
+
+    /* Ambient particles & sparkles */
+    #ambient-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .particle-dust {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background: rgba(147, 197, 253, 0.7);
+      pointer-events: none;
+      animation: floatUp linear infinite;
+    }
+
+    .sparkle-cross {
+      position: absolute;
+      pointer-events: none;
+      font-size: 15px;
+      color: #93c5fd;
+      animation: twinkleTwist ease-in-out infinite alternate;
+    }
+
+    .sparkle-gold {
+      color: #facc15;
+      font-size: 13px;
+    }
+
+    @keyframes floatUp {
+      0% {
+        transform: translateY(105vh) translateX(0) scale(0.8);
+        opacity: 0;
+      }
+      20% { opacity: 0.85; }
+      80% { opacity: 0.85; }
+      100% {
+        transform: translateY(-10vh) translateX(30px) scale(1.1);
+        opacity: 0;
+      }
+    }
+
+    @keyframes twinkleTwist {
+      0% {
+        transform: scale(0.6) rotate(0deg);
+        opacity: 0.2;
+        filter: drop-shadow(0 0 2px rgba(147, 197, 253, 0.3));
+      }
+      50% {
+        transform: scale(1.35) rotate(45deg);
+        opacity: 1;
+        filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.85));
+      }
+      100% {
+        transform: scale(0.7) rotate(90deg);
+        opacity: 0.3;
+      }
+    }
+
+    .viewport-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      background-image: radial-gradient(#d8e7ff 1.5px, transparent 1.5px);
+      background-size: 20px 20px;
+      opacity: 0.35;
+    }
+
+    /* Screen Layers: True 100vw x 100vh Fullscreen Viewport */
+    .screen-layer {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 10;
+      background-color: var(--bg-canvas);
+    }
+
+    .screen-layer.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    /* True Edge-to-Edge Screen Container */
+    .fullscreen-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Fullscreen Edge-to-Edge Fill */
+    .fullscreen-bg-cover {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      object-fit: cover;
+      object-position: center;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* Pure CSS Pixel Grid Canvas for Screen 2 */
+    .clean-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background-color: #f7faff;
+      background-image: 
+        linear-gradient(90deg, rgba(219, 234, 254, 0.5) 1px, transparent 1px),
+        linear-gradient(rgba(219, 234, 254, 0.5) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .fullscreen-interactive {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      z-index: 15;
+    }
+
+    /* Fullscreen Centered Progress UI on Screen 2 */
+    .progress-center-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 65%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .cat-track {
+      position: relative;
+      width: 100%;
+      height: 38px;
+    }
+
+    .pixel-cat-walker {
+      position: absolute;
+      bottom: -3px;
+      left: 0%;
+      transform: translateX(-50%);
+      width: 42px;
+      height: 32px;
+      cursor: pointer;
+    }
+
+    .cat-sprite {
+      width: 100%;
+      height: 100%;
+      animation: catWalkCycle 0.3s infinite alternate steps(2);
+    }
+
+    @keyframes catWalkCycle {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(-4px) rotate(1deg); }
+    }
+
+    .progress-outer-bar {
+      position: relative;
+      width: 100%;
+      height: 24px;
+      background: #ffffff;
+      border: 3.5px solid var(--border-blue);
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15), inset 0 2px 4px rgba(0,0,0,0.06);
+      overflow: hidden;
+      padding: 2px;
+    }
+
+    .progress-inner-fill {
+      height: 100%;
+      width: 0%;
+      background: repeating-linear-gradient(
+        -45deg,
+        #53aaff,
+        #53aaff 10px,
+        #3582f0 10px,
+        #3582f0 20px
+      );
+      background-size: 40px 40px;
+      animation: barStripeMove 0.9s linear infinite;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.45);
+    }
+
+    @keyframes barStripeMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 40px 0; }
+    }
+
+    .progress-percentage {
+      margin-top: 14px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #2b5597;
+      letter-spacing: 1px;
+      cursor: help;
+      text-shadow: 1px 1px 0px #ffffff;
+    }
+
+    .status-ticker {
+      margin-top: 12px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      color: #47628f;
+      text-align: center;
+      min-height: 20px;
+      padding: 0 10px;
+      animation: blinkText 1.6s infinite;
+      text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
+    }
+
+    @keyframes blinkText {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Hotspot dynamically centered over the image button */
+    .reload-hotspot {
+      position: absolute;
+      top: 67%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 15%;
+      height: 8.5%;
+      min-width: 120px;
+      min-height: 40px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+      z-index: 25;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .reload-hotspot:hover {
+      background: rgba(59, 130, 246, 0.12);
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+
+    .reload-hotspot:active {
+      transform: translateX(-50%) scale(0.96);
+      background: rgba(59, 130, 246, 0.22);
+    }
+
+    .cat-error-zone {
+      position: absolute;
+      top: 36%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12%;
+      height: 15%;
+      cursor: pointer;
+      z-index: 25;
+    }
+
+    /* Instagram Credits: Fixed to bottom right corner */
+    .credits-box {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .insta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid var(--pixel-blue);
+      color: #1e3a8a;
+      text-decoration: none;
+      font-size: 11px;
+      font-variant: small-caps;
+      letter-spacing: 0.8px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      box-shadow: 2px 2px 0px #93c5fd;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+    }
+
+    .insta-pill:hover {
+      background: #eff6ff;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px #60a5fa;
+    }
+
+    .insta-pill:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px #60a5fa;
+    }
+
+    /* Center-bottom Restart Button */
+    .reset-btn {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 9px 18px;
+      font-family: inherit;
+      font-size: 10.5px;
+      white-space: nowrap;
+      color: #1e3a8a;
+      background: #eff6ff;
+      border: 2px solid #3b82f6;
+      box-shadow: 2.5px 2.5px 0px #93c5fd;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      letter-spacing: 0.5px;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .reset-btn:hover {
+      background: #dbeafe;
+      transform: translateX(-50%) translate(-1px, -1px);
+      box-shadow: 3.5px 3.5px 0px #60a5fa;
+    }
+
+    .reset-btn:active {
+      transform: translateX(-50%) translate(2px, 2px);
+      box-shadow: 1px 1px 0px #60a5fa;
+    }
+
+    /* Notification Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      padding: 9px 16px;
+      background: #ffffff;
+      border: 2px solid #2563eb;
+      box-shadow: 4px 4px 0 #bfdbfe;
+      color: #1e40af;
+      font-size: 11px;
+      border-radius: 4px;
+      z-index: 100;
+      opacity: 0;
+      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Sound Control: Bottom Left to keep Right Corner clean */
+    .sound-toggle {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 60;
+      background: #ffffff;
+      border: 2px solid #93c5fd;
+      padding: 7px 11px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: #3b82f6;
+      cursor: pointer;
+      box-shadow: 2px 2px 0px #bfdbfe;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .glitch {
+      animation: pixelFlicker 0.18s linear 2;
+    }
+
+    @keyframes pixelFlicker {
+      0% { opacity: 1; }
+      40% { opacity: 0.2; transform: translate(2px, -1px); }
+      70% { opacity: 0.8; transform: translate(-2px, 1px); }
+      100% { opacity: 1; transform: translate(0); }
+    }
+
+    /* Mobile Adaptations */
+    @media (max-width: 768px) {
+      .progress-center-box {
+        width: 84%;
+      }
+
+      .progress-outer-bar {
+        height: 22px;
+        border-width: 2.5px;
+      }
+
+      .pixel-cat-walker {
+        width: 36px;
+        height: 28px;
+        bottom: -2px;
+      }
+
+      .progress-percentage {
+        font-size: 15px;
+        margin-top: 10px;
+      }
+
+      .status-ticker {
+        font-size: 9.5px;
+        margin-top: 8px;
+      }
+
+      .reload-hotspot {
+        width: 35%;
+        height: 7%;
+        min-width: 110px;
+        min-height: 38px;
+        top: 66%;
+      }
+
+      .credits-box {
+        bottom: 12px;
+        right: 12px;
+        gap: 6px;
+      }
+
+      .insta-pill {
+        font-size: 9px;
+        padding: 5px 9px;
+      }
+
+      .reset-btn {
+        bottom: 14px;
+        padding: 7px 13px;
+        font-size: 9px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="viewport-overlay"></div>
+  <div id="ambient-container"></div>
+
+  <!-- Screen 1: Fullscreen Network Error -->
+  <section class="screen-layer active" id="layer-error">
+    <div class="fullscreen-container">
+      <img src="https://res.cloudinary.com/ij3pyhjj/image/upload/v1789189887/network_error.jpg" alt="Network Error" class="fullscreen-bg-cover">
+      <div class="fullscreen-interactive">
+        <div class="reload-hotspot" id="btn-reload" role="button" aria-label="Reload"></div>
+        <div class="cat-error-zone" id="egg-cat-error" title="Sad cat"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 2: Clean Animated Progress Bar -->
+  <section class="screen-layer" id="layer-loading">
+    <div class="fullscreen-container">
+      <div class="clean-canvas"></div>
+      <div class="progress-center-box">
+        <div class="cat-track">
+          <div class="pixel-cat-walker" id="cat-walker" title="Walking pixel cat">
+            <svg class="cat-sprite" viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 6H10V9H7V6ZM18 6H21V9H18V6Z" fill="#3B82F6"/>
+              <path d="M8 8H20V17H8V8Z" fill="#FFFFFF"/>
+              <path d="M6 9H22V16H6V9Z" fill="#FFFFFF"/>
+              <path d="M7 8H9V6H10V8H18V6H19V8H21V9H22V16H21V17H19V19H17V17H11V19H9V17H7V16H6V9H7V8Z" stroke="#2563EB" stroke-width="1.2"/>
+              <rect x="9" y="11" width="2" height="2" fill="#2563EB"/>
+              <rect x="17" y="11" width="2" height="2" fill="#2563EB"/>
+              <rect x="7" y="13" width="2" height="1.5" fill="#FCA5A5"/>
+              <rect x="19" y="13" width="2" height="1.5" fill="#FCA5A5"/>
+              <path d="M5 14H3V10H4V9H6V11H5V14Z" fill="#FFFFFF" stroke="#2563EB" stroke-width="1.1"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="progress-outer-bar">
+          <div class="progress-inner-fill" id="progress-fill"></div>
+        </div>
+        
+        <div class="progress-percentage" id="progress-text">0%</div>
+        <div class="status-ticker" id="loading-status">Connecting to the useless internet...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screen 3: Fullscreen Thanks For Waiting -->
+  <section class="screen-layer" id="layer-success">
+    <div class="fullscreen-container">
+      <img src="https://res.cloudinary.com/ij3pyhjj/image/upload/v1789189888/thanks_4_watching.jpg" alt="Thank you for waiting! Bye bye." class="fullscreen-bg-cover">
+      <div class="fullscreen-interactive">
+        
+        <button class="reset-btn" id="btn-restart">Return to the internet</button>
+
+        <!-- Instagram Credits aligned at the bottom right corner with small-caps -->
+        <div class="credits-box">
+          <a class="insta-pill" href="https://instagram.com/syinaann" target="_blank" rel="noopener noreferrer">
+            📸 @syinaann
+          </a>
+          <a class="insta-pill" href="https://instagram.com/_.balram___" target="_blank" rel="noopener noreferrer">
+            📸 @_.balram___
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <button class="sound-toggle" id="sound-btn">
+    <span id="sound-icon">🔈</span> <span id="sound-label">SOUND: OFF</span>
+  </button>
+
+  <script>
+    let audioCtx = null;
+    let soundEnabled = false;
+
+    // Catbox Audio Integration
+    const successAudio = new Audio("https://files.catbox.moe/he813q.mp3");
+    successAudio.preload = "auto";
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playTone(freq, type, duration, vol = 0.08) {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    const soundEffects = {
+      blip: () => playTone(540, 'square', 0.05, 0.03),
+      step: () => playTone(720, 'triangle', 0.04, 0.02),
+      error: () => {
+        playTone(220, 'sawtooth', 0.15, 0.08);
+        setTimeout(() => playTone(165, 'sawtooth', 0.25, 0.08), 120);
+      },
+      click: () => playTone(880, 'sine', 0.06, 0.05)
+    };
+
+    const soundBtn = document.getElementById('sound-btn');
+    soundBtn.addEventListener('click', () => {
+      initAudio();
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔈';
+      document.getElementById('sound-label').textContent = soundEnabled ? 'SOUND: ON' : 'SOUND: OFF';
+      if (soundEnabled) soundEffects.click();
+    });
+
+    const ambientContainer = document.getElementById('ambient-container');
+    const particleCount = window.innerWidth < 768 ? 14 : 26;
+    for (let i = 0; i < particleCount; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle-dust';
+      p.style.left = `${Math.random() * 100}vw`;
+      p.style.animationDelay = `${Math.random() * 12}s`;
+      p.style.animationDuration = `${8 + Math.random() * 8}s`;
+      ambientContainer.appendChild(p);
+    }
+
+    const sparkleCount = window.innerWidth < 768 ? 10 : 20;
+    const sparkleSymbols = ['✦', '✧', '❖', '★'];
+    for (let i = 0; i < sparkleCount; i++) {
+      const s = document.createElement('div');
+      s.className = `sparkle-cross ${Math.random() > 0.6 ? 'sparkle-gold' : ''}`;
+      s.textContent = sparkleSymbols[Math.floor(Math.random() * sparkleSymbols.length)];
+      s.style.left = `${Math.random() * 96}vw`;
+      s.style.top = `${Math.random() * 96}vh`;
+      s.style.animationDelay = `${Math.random() * 5}s`;
+      s.style.animationDuration = `${2.5 + Math.random() * 3}s`;
+      ambientContainer.appendChild(s);
+    }
+
+    const layerLoading = document.getElementById('layer-loading');
+    const layerError = document.getElementById('layer-error');
+    const layerSuccess = document.getElementById('layer-success');
+    const loadingStatus = document.getElementById('loading-status');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const catWalker = document.getElementById('cat-walker');
+    const reloadBtn = document.getElementById('btn-reload');
+    const restartBtn = document.getElementById('btn-restart');
+
+    const loadingPhrases = [
+      "Connecting to the useless internet...",
+      "Negotiating packet transfers...",
+      "Finding absolutely nothing...",
+      "Consulting the pixel cat...",
+      "Downloading empty files...",
+      "Checking your patience level...",
+      "Almost there...",
+      "Probably...",
+      "Extracting imaginary assets...",
+      "Verifying zero data packets...",
+      "Polishing pixels..."
+    ];
+
+    let currentPhase = 0;
+    let cancelCurrentAnimation = null;
+    let tickerInterval = null;
+    let isRunning = false;
+
+    function showLayer(targetLayer) {
+      [layerLoading, layerError, layerSuccess].forEach(layer => layer.classList.remove('active'));
+      targetLayer.classList.add('active');
+      document.body.classList.add('glitch');
+      setTimeout(() => document.body.classList.remove('glitch'), 200);
+    }
+
+    function setProgressDisplay(pct) {
+      progressFill.style.width = `${pct}%`;
+      catWalker.style.left = `${pct}%`;
+      progressText.textContent = `${Math.floor(pct)}%`;
+    }
+
+    function startStatusTicker() {
+      stopStatusTicker();
+      let phraseIdx = 0;
+      loadingStatus.textContent = loadingPhrases[phraseIdx];
+      tickerInterval = setInterval(() => {
+        phraseIdx = (phraseIdx + 1) % loadingPhrases.length;
+        loadingStatus.textContent = loadingPhrases[phraseIdx];
+      }, 3000);
+    }
+
+    function stopStatusTicker() {
+      if (tickerInterval) {
+        clearInterval(tickerInterval);
+        tickerInterval = null;
+      }
+    }
+
+    function animateSegment(startVal, endVal, durationMs) {
+      return new Promise((resolve) => {
+        const startTime = performance.now();
+        let lastPlayedVal = -1;
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / durationMs, 1);
+          const currentVal = startVal + (endVal - startVal) * progress;
+
+          setProgressDisplay(currentVal);
+
+          const intVal = Math.floor(currentVal);
+          if (intVal !== lastPlayedVal && intVal % 3 === 0) {
+            soundEffects.step();
+            lastPlayedVal = intVal;
+          }
+
+          if (progress < 1) {
+            cancelCurrentAnimation = requestAnimationFrame(step);
+          } else {
+            setProgressDisplay(endVal);
+            cancelCurrentAnimation = null;
+            resolve();
+          }
+        }
+        cancelCurrentAnimation = requestAnimationFrame(step);
+      });
+    }
+
+    async function runPhaseOne() {
+      if (isRunning) return;
+      isRunning = true;
+      showLayer(layerLoading);
+      setProgressDisplay(0);
+      startStatusTicker();
+
+      try {
+        await animateSegment(0, 38, 2200);
+        await new Promise(r => setTimeout(r, 1600));
+        stopStatusTicker();
+        soundEffects.error();
+        showLayer(layerError);
+        currentPhase = 1;
+      } catch (e) {}
+      isRunning = false;
+    }
+
+    async function runPhaseTwo() {
+      if (isRunning) return;
+      isRunning = true;
+      showLayer(layerLoading);
+      setProgressDisplay(0);
+      startStatusTicker();
+
+      const timeline = [
+        { from: 0, to: 45, duration: 7000 },
+        { from: 45, to: 52, duration: 16000 },
+        { from: 52, to: 61, duration: 6000 },
+        { from: 61, to: 74, duration: 64000 },
+        { from: 74, to: 83, duration: 7000 },
+        { from: 83, to: 92, duration: 38000 },
+        { from: 92, to: 100, duration: 12000 }
+      ];
+
+      try {
+        for (const seg of timeline) {
+          await animateSegment(seg.from, seg.to, seg.duration);
+        }
+        stopStatusTicker();
+        setTimeout(() => {
+          showLayer(layerSuccess);
+          successAudio.currentTime = 0;
+          successAudio.play().catch(() => {});
+        }, 500);
+      } catch (e) {}
+      isRunning = false;
+    }
+
+    reloadBtn.addEventListener('click', () => {
+      if (isRunning) return;
+      initAudio();
+      successAudio.load();
+      soundEffects.click();
+      if (cancelCurrentAnimation) {
+        cancelAnimationFrame(cancelCurrentAnimation);
+      }
+      if (currentPhase === 0) {
+        runPhaseOne();
+      } else {
+        runPhaseTwo();
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      soundEffects.click();
+      successAudio.pause();
+      successAudio.currentTime = 0;
+      if (cancelCurrentAnimation) {
+        cancelAnimationFrame(cancelCurrentAnimation);
+      }
+      isRunning = false;
+      currentPhase = 0;
+      showLayer(layerError);
+    });
+
+    const toast = document.getElementById('toast');
+    let toastTimeout = null;
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2600);
+    }
+
+    let percentClicks = 0;
+    progressText.addEventListener('click', () => {
+      percentClicks++;
+      soundEffects.blip();
+      if (percentClicks === 1) showToast("Why are you clicking the number?");
+      else if (percentClicks === 2) showToast("Seriously?");
+      else showToast("Clicking will not speed up the 2.5 minutes.");
+    });
+
+    let catClicks = 0;
+    function handleCatClick() {
+      catClicks++;
+      soundEffects.blip();
+      if (catClicks < 3) {
+        showToast("Stop disturbing the cat.");
+      } else {
+        showToast("The cat has reported you to authorities.");
+      }
+    }
+    document.getElementById('cat-walker').addEventListener('click', handleCatClick);
+    document.getElementById('egg-cat-error').addEventListener('click', handleCatClick);
+  </script>
+</body>
+</html>
